@@ -1,5 +1,6 @@
-use http_types::headers::{HeaderName, HeaderValue};
-use http_types::{Response, StatusCode};
+use http::header::CONTENT_TYPE;
+use http::{HeaderName, HeaderValue, Response, StatusCode};
+use hyper::Body;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -12,7 +13,7 @@ use std::time::Duration;
 /// [`MockServer`]: crate::MockServer
 #[derive(Clone, Debug)]
 pub struct ResponseTemplate {
-    mime: Option<http_types::Mime>,
+    mime: Option<mime::Mime>,
     status_code: StatusCode,
     headers: HashMap<HeaderName, Vec<HeaderValue>>,
     body: Option<Vec<u8>>,
@@ -146,7 +147,8 @@ impl ResponseTemplate {
 
         self.body = Some(body);
         self.mime = Some(
-            http_types::Mime::from_str("application/json")
+            "application/json"
+                .parse::<mime::Mime>()
                 .expect("Failed to convert into Mime header"),
         );
         self
@@ -163,9 +165,8 @@ impl ResponseTemplate {
         let body = body.try_into().expect("Failed to convert into body.");
 
         self.body = Some(body.into_bytes());
-        self.mime = Some(
-            http_types::Mime::from_str("text/plain").expect("Failed to convert into Mime header"),
-        );
+        self.mime =
+            Some(mime::Mime::from_str("text/plain").expect("Failed to convert into Mime header"));
         self
     }
 
@@ -220,8 +221,7 @@ impl ResponseTemplate {
     {
         let body = body.try_into().expect("Failed to convert into body.");
         self.body = Some(body);
-        self.mime =
-            Some(http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"));
+        self.mime = Some(mime::Mime::from_str(mime).expect("Failed to convert into Mime header"));
         self
     }
 
@@ -272,25 +272,28 @@ impl ResponseTemplate {
     }
 
     /// Generate a response from the template.
-    pub(crate) fn generate_response(&self) -> Response {
-        let mut response = Response::new(self.status_code);
+    pub(crate) fn generate_response(&self) -> Response<hyper::Body> {
+        let mut response = Response::builder().status(self.status_code);
 
         // Add headers
+        let headers = response.headers_mut().unwrap();
         for (header_name, header_values) in &self.headers {
-            response.insert_header(header_name.clone(), header_values.as_slice());
-        }
-
-        // Add body, if specified
-        if let Some(body) = &self.body {
-            response.set_body(body.clone());
+            for header_value in header_values {
+                headers.append(header_name.clone(), header_value.clone());
+            }
         }
 
         // Set content-type, if needed
         if let Some(mime) = &self.mime {
-            response.set_content_type(mime.to_owned());
+            headers.append(CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap());
         }
 
-        response
+        // Add body, if specified
+        if let Some(body) = &self.body {
+            response.body(Body::from(body.clone())).unwrap()
+        } else {
+            response.body(Body::empty()).unwrap()
+        }
     }
 
     /// Retrieve the response delay.

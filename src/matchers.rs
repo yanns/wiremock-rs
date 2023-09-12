@@ -10,8 +10,7 @@
 use crate::{Match, Request};
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use base64::prelude::{Engine as _, BASE64_STANDARD};
-use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
-use http_types::{Method, Url};
+use http::{HeaderName, HeaderValue, Method};
 use log::debug;
 use regex::Regex;
 use serde::Serialize;
@@ -19,6 +18,7 @@ use serde_json::Value;
 use std::convert::TryInto;
 use std::ops::Deref;
 use std::str;
+use url::Url;
 
 /// Implement the `Match` trait for all closures, out of the box,
 /// if their signature is compatible.
@@ -342,7 +342,7 @@ impl Match for PathRegexMatcher {
 ///     assert_eq!(status, 200);
 /// }
 /// ```
-pub struct HeaderExactMatcher(HeaderName, HeaderValues);
+pub struct HeaderExactMatcher(HeaderName, Vec<HeaderValue>);
 
 /// Shorthand for [`HeaderExactMatcher::new`].
 pub fn header<K, V>(key: K, value: V) -> HeaderExactMatcher
@@ -352,7 +352,8 @@ where
     V: TryInto<HeaderValue>,
     <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
 {
-    HeaderExactMatcher::new(key, value.try_into().map(HeaderValues::from).unwrap())
+    let values = value.try_into().map(|v| vec![v]).unwrap();
+    HeaderExactMatcher::new(key, values)
 }
 
 /// Shorthand for [`HeaderExactMatcher::new`] supporting multi valued headers.
@@ -366,7 +367,7 @@ where
     let values = values
         .into_iter()
         .filter_map(|v| v.try_into().ok())
-        .collect::<HeaderValues>();
+        .collect::<Vec<HeaderValue>>();
     HeaderExactMatcher::new(key, values)
 }
 
@@ -375,8 +376,8 @@ impl HeaderExactMatcher {
     where
         K: TryInto<HeaderName>,
         <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
-        V: TryInto<HeaderValues>,
-        <V as TryInto<HeaderValues>>::Error: std::fmt::Debug,
+        V: TryInto<Vec<HeaderValue>>,
+        <V as TryInto<Vec<HeaderValue>>>::Error: std::fmt::Debug,
     {
         let key = key.try_into().expect("Failed to convert to header name.");
         let value = value
@@ -390,10 +391,7 @@ impl Match for HeaderExactMatcher {
     fn matches(&self, request: &Request) -> bool {
         match request.headers.get(&self.0) {
             None => false,
-            Some(values) => {
-                let headers: Vec<&str> = self.1.iter().map(HeaderValue::as_str).collect();
-                values.eq(headers.as_slice())
-            }
+            Some(values) => &self.1 == values,
         }
     }
 }
@@ -517,7 +515,11 @@ impl Match for HeaderRegexMatcher {
             None => false,
             Some(values) => {
                 let has_values = values.iter().next().is_some();
-                has_values && values.iter().all(|v| self.1.is_match(v.as_str()))
+                has_values
+                    && values.iter().all(|v| {
+                        self.1
+                            .is_match(&String::from_utf8(v.as_bytes().to_owned()).unwrap())
+                    })
             }
         }
     }

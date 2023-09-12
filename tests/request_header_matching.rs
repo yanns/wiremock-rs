@@ -60,7 +60,7 @@ async fn should_not_match_simple_request_header_upon_wrong_value() {
 async fn should_match_multi_request_header() {
     // Arrange
     let mock_server = MockServer::start().await;
-    let header_matcher = headers("cache-control", vec!["no-cache", "no-store"]);
+    let header_matcher = headers("cache-control", vec!["no-cache, no-store"]);
     let mock = Mock::given(method("GET"))
         .and(header_matcher)
         .respond_with(ResponseTemplate::new(200));

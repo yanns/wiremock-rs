@@ -35,7 +35,7 @@ impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         request: Request,
-    ) -> (http_types::Response, Option<futures_timer::Delay>) {
+    ) -> (http::Response<hyper::Body>, Option<futures_timer::Delay>) {
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
         if let Some(received_requests) = &mut self.received_requests {
@@ -99,7 +99,7 @@ impl BareMockServer {
 
     /// Register a **scoped** `Mock` on an instance of `MockServer`.
     ///
-    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.  
+    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.
     /// When using `register_as_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
     /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
     /// verified - if not, it will panic.
@@ -147,7 +147,7 @@ impl BareMockServer {
         &self.server_address
     }
 
-    /// Return a vector with all the requests received by the `BareMockServer` since it started.  
+    /// Return a vector with all the requests received by the `BareMockServer` since it started.
     /// If no request has been served, it returns an empty vector.
     ///
     /// If request recording was disabled, it returns `None`.
@@ -191,7 +191,7 @@ pub struct MockGuard {
 
 impl MockGuard {
     /// Return all the requests that have been matched by the corresponding
-    /// scoped [`Mock`] since it was mounted.  
+    /// scoped [`Mock`] since it was mounted.
     /// The requests are returned in the order they were received.
     ///
     /// It returns an empty vector if no request has been matched.
@@ -215,7 +215,7 @@ impl MockGuard {
     /// want.
     ///
     /// It is strongly recommended that you set your own timeout using the
-    /// appropriate timers from your chosen async runtime.  
+    /// appropriate timers from your chosen async runtime.
     /// Since `wiremock` is runtime-agnostic, it cannot provide a default
     /// timeout mechanism that would work for all users.
     ///
@@ -232,7 +232,7 @@ impl MockGuard {
     ///     let response = ResponseTemplate::new(200);
     ///     let mock = Mock::given(method("GET")).respond_with(response);
     ///     let mock_guard = mock_server.register_as_scoped(mock).await;
-    ///     
+    ///
     ///     // Act
     ///     let waiter = mock_guard.wait_until_satisfied();
     ///     // Here we wrap the waiter in a tokio timeout

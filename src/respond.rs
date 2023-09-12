@@ -40,7 +40,7 @@ use crate::{Request, ResponseTemplate};
 /// ## Dynamic responses
 ///
 /// You can use `Respond`, though, to implement responses that depend on the data in
-/// the request matched by a [`Mock`].  
+/// the request matched by a [`Mock`].
 ///
 /// Functions from `Request` to `ResponseTemplate` implement `Respond`, so for simple cases you
 /// can use a closure to build a response dynamically, for instance to echo the request body back:
@@ -75,7 +75,7 @@ use crate::{Request, ResponseTemplate};
 /// `Respond` that propagates back a request header in the response:
 ///
 /// ```rust
-/// use http_types::headers::HeaderName;
+/// use http::HeaderName;
 /// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate, Respond};
 /// use wiremock::matchers::path;
 /// use std::convert::TryInto;
@@ -109,7 +109,7 @@ use crate::{Request, ResponseTemplate};
 ///         .respond_with(CorrelationIdResponder(ResponseTemplate::new(200)))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
 ///     let response = surf::get(format!("{}/hello", &mock_server.uri()))
 ///         .header("X-Correlation-Id", correlation_id)
 ///         .await

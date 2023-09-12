@@ -112,7 +112,7 @@ impl MockServer {
         Self(InnerServer::Pooled(get_pooled_mock_server().await))
     }
 
-    /// Register a [`Mock`] on an instance of `MockServer`.  
+    /// Register a [`Mock`] on an instance of `MockServer`.
     /// The [`Mock`] will remain active until `MockServer` is shut down. If you want to control or limit how
     /// long your [`Mock`] stays active, check out [`MockServer::register_as_scoped`].
     ///
@@ -162,7 +162,7 @@ impl MockServer {
 
     /// Register a **scoped** [`Mock`] on an instance of `MockServer`.
     ///
-    /// When using `register`, your [`Mock`]s will be active until the `MockServer` is shut down.  
+    /// When using `register`, your [`Mock`]s will be active until the `MockServer` is shut down.
     /// When using `register_as_scoped`, your [`Mock`]s will be active as long as the returned [`MockGuard`] is not dropped.
     /// When the returned [`MockGuard`] is dropped, `MockServer` will verify that the expectations set on the scoped [`Mock`] were
     /// verified - if not, it will panic.
@@ -175,9 +175,9 @@ impl MockServer {
     /// When expectations of a scoped [`Mock`] are not verified, it will trigger a panic - just like a normal [`Mock`].
     /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's `Drop` trait,
     /// the panic message will not include the filename and the line location
-    /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
+    /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.
     ///
-    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?  
+    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?
     /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
     /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
     /// not met.
@@ -423,7 +423,7 @@ impl MockServer {
     ///
     /// ```rust
     /// use wiremock::MockServer;
-    /// use http_types::Method;
+    /// use http::Method;
     ///
     /// #[async_std::main]
     /// async fn main() {

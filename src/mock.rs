@@ -21,7 +21,7 @@ use std::ops::{
 ///     fn matches(&self, request: &Request) -> bool {
 ///         match request.headers.get(&self.0) {
 ///             // We are ignoring multi-valued headers for simplicity
-///             Some(values) => values[0].as_str().len() % 2 == 1,
+///             Some(values) => values[0].to_str().unwrap().len() % 2 == 1,
 ///             None => false
 ///         }
 ///     }
@@ -36,7 +36,7 @@ use std::ops::{
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
 ///     // Even length
 ///     let status = surf::get(&mock_server.uri())
 ///         .header("custom", "even")
@@ -68,12 +68,12 @@ use std::ops::{
 /// async fn main() {
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
-///     
-///     let header_name: http_types::headers::HeaderName = "custom".try_into().unwrap();
+///
+///     let header_name: http::HeaderName = "custom".try_into().unwrap();
 ///     // Check that a header with the specified name exists and its value has an odd length.
 ///     let matcher = move |request: &Request| {
 ///         match request.headers.get(&header_name) {
-///             Some(values) => values[0].as_str().len() % 2 == 1,
+///             Some(values) => values[0].to_str().unwrap().len() % 2 == 1,
 ///             None => false
 ///         }
 ///     };
@@ -82,7 +82,7 @@ use std::ops::{
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
 ///     // Even length
 ///     let status = surf::get(&mock_server.uri())
 ///         .header("custom", "even")
@@ -161,7 +161,7 @@ impl Debug for Matcher {
 ///
 ///     // We won't register this mock instead.
 ///     let unregistered_mock = Mock::given(method("GET")).respond_with(response);
-///     
+///
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
 ///         .await
@@ -198,7 +198,7 @@ impl Debug for Matcher {
 ///         // Mounting the mock on the mock server - it's now effective!
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
 ///         .await
@@ -316,7 +316,7 @@ impl Mock {
     ///         .up_to_n_times(1)
     ///         .mount(&mock_server)
     ///         .await;
-    ///     
+    ///
     ///     // Act
     ///
     ///     // The first request matches, as expected.
@@ -436,7 +436,7 @@ impl Mock {
     ///         .named("Root GET")
     ///         .mount(&mock_server)
     ///         .await;
-    ///     
+    ///
     ///     // Act
     ///     let status = surf::get(&mock_server.uri())
     ///         .await
@@ -456,7 +456,7 @@ impl Mock {
         self
     }
 
-    /// Assign a name to your mock.  
+    /// Assign a name to your mock.
     ///
     /// The mock name will be used in error messages (e.g. if the mock expectation
     /// is not satisfied) and debug logs to help you identify what failed.
@@ -495,7 +495,7 @@ impl Mock {
     ///         .named("Root POST")
     ///         .mount(&mock_server)
     ///         .await;
-    ///     
+    ///
     ///     // Act
     ///     let status = surf::get(&mock_server.uri())
     ///         .await
@@ -528,7 +528,7 @@ impl Mock {
 
     /// Mount a [`Mock`] as **scoped**  on an instance of [`MockServer`].
     ///
-    /// When using [`mount`], your [`Mock`]s will be active until the [`MockServer`] is shut down.  
+    /// When using [`mount`], your [`Mock`]s will be active until the [`MockServer`] is shut down.
     /// When using `mount_as_scoped`, your [`Mock`]s will be active as long as the returned [`MockGuard`] is not dropped.
     /// When the returned [`MockGuard`] is dropped, [`MockServer`] will verify that the expectations set on the scoped [`Mock`] were
     /// verified - if not, it will panic.
@@ -541,9 +541,9 @@ impl Mock {
     /// When expectations of a scoped [`Mock`] are not verified, it will trigger a panic - just like a normal [`Mock`].
     /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's [`Drop`](std::ops::Drop) trait,
     /// the panic message will not include the filename and the line location
-    /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
+    /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.
     ///
-    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?  
+    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?
     /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
     /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
     /// not met.

@@ -1,11 +1,8 @@
-use std::iter::FromIterator;
-use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
-use futures::AsyncReadExt;
-use http_types::convert::DeserializeOwned;
-use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
-use http_types::{Method, Url};
+use http::{HeaderName, HeaderValue, Method};
+use serde::de::DeserializeOwned;
+use url::Url;
 
 /// An incoming request to an instance of [`MockServer`].
 ///
@@ -29,7 +26,7 @@ use http_types::{Method, Url};
 pub struct Request {
     pub url: Url,
     pub method: Method,
-    pub headers: HashMap<HeaderName, HeaderValues>,
+    pub headers: HashMap<HeaderName, Vec<HeaderValue>>,
     pub body: Vec<u8>,
 }
 
@@ -39,7 +36,7 @@ impl fmt::Display for Request {
         for (name, values) in &self.headers {
             let values = values
                 .iter()
-                .map(|value| format!("{}", value))
+                .map(|value| String::from_utf8(value.as_bytes().to_owned()).unwrap())
                 .collect::<Vec<_>>();
             let values = values.join(",");
             writeln!(f, "{}: {}", name, values)?;
@@ -53,34 +50,13 @@ impl Request {
         serde_json::from_slice(&self.body)
     }
 
-    pub async fn from(mut request: http_types::Request) -> Request {
-        let method = request.method();
-        let url = request.url().to_owned();
-
-        let mut headers = HashMap::new();
-        for (header_name, header_values) in &request {
-            headers.insert(header_name.to_owned(), header_values.to_owned());
-        }
-
-        let mut body: Vec<u8> = vec![];
-        request
-            .take_body()
-            .into_reader()
-            .read_to_end(&mut body)
-            .await
-            .expect("Failed to read body");
-
-        Self {
-            url,
-            method,
-            headers,
-            body,
-        }
+    pub async fn from(request: http::Request<hyper::Body>) -> Request {
+        Self::from_hyper(request).await
     }
 
     pub(crate) async fn from_hyper(request: hyper::Request<hyper::Body>) -> Request {
         let (parts, body) = request.into_parts();
-        let method = parts.method.into();
+        let method = parts.method;
         let url = match parts.uri.authority() {
             Some(_) => parts.uri.to_string(),
             None => format!("http://localhost{}", parts.uri),
@@ -89,24 +65,13 @@ impl Request {
         .unwrap();
 
         let mut headers = HashMap::new();
-        for name in parts.headers.keys() {
-            let name = name.as_str().as_bytes().to_owned();
-            let name = HeaderName::from_bytes(name).unwrap();
-            let values = parts.headers.get_all(name.as_str());
-            for value in values {
-                let value = value.as_bytes().to_owned();
-                let value = HeaderValue::from_bytes(value).unwrap();
-                let value_parts = value.as_str().split(',');
-                let value_parts = value_parts
-                    .map(|it| it.trim())
-                    .filter_map(|it| HeaderValue::from_str(it).ok());
-                headers
-                    .entry(name.clone())
-                    .and_modify(|values: &mut HeaderValues| {
-                        values.append(&mut HeaderValues::from_iter(value_parts.clone()))
-                    })
-                    .or_insert_with(|| value_parts.collect());
-            }
+        for (name, value) in parts.headers.iter() {
+            headers
+                .entry(name.clone())
+                .and_modify(|values: &mut Vec<HeaderValue>| {
+                    values.push(value.clone());
+                })
+                .or_insert_with(|| vec![value.clone()]);
         }
 
         let body = hyper::body::to_bytes(body)
